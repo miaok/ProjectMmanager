@@ -300,6 +300,182 @@ def query_management():
                         href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename_base}_全部数据.xlsx">下载所有查询结果</a>'
                         st.markdown(href, unsafe_allow_html=True)
 
+    # 按项目查询
+    with query_tab2:
+        st.write("根据项目信息查询关联数据")
+
+        # 获取所有项目数据
+        conn = get_connection()
+        projects_df = pd.read_sql("SELECT id, name FROM project", conn)
+        persons_df = pd.read_sql("SELECT id, name FROM person", conn)
+
+        if projects_df.empty:
+            st.info("暂无项目数据")
+        else:
+            # 下拉选择项目
+            selected_project = st.selectbox(
+                "选择项目",
+                options=projects_df['id'].tolist(),
+                format_func=lambda x: projects_df[projects_df['id'] == x]['name'].iloc[0],
+                key="project_select"
+            )
+
+            # 多选查询类型
+            query_types = st.multiselect(
+                "选择要查询的关联信息",
+                options=["项目详情", "项目负责人", "项目成员"],
+                default=["项目详情", "项目负责人", "项目成员"],
+                key="project_query_types"
+            )
+
+            if st.button("查询", key="project_query_button"):
+                results = {}
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename_base = f"项目查询_{projects_df[projects_df['id'] == selected_project]['name'].iloc[0]}_{timestamp}"
+
+                # 项目详情查询
+                if "项目详情" in query_types:
+                    project_info = pd.read_sql(f"SELECT * FROM project WHERE id = {selected_project}", conn)
+                    if not project_info.empty:
+                        # 格式化项目数据，将leader_id和members替换为姓名
+                        persons_dict = dict(zip(persons_df['id'], persons_df['name']))
+
+                        def format_leader(leader_id):
+                            if pd.isna(leader_id) or leader_id is None:
+                                return "无"
+                            return persons_dict.get(leader_id, f"ID:{leader_id}")
+
+                        def format_members(members_str):
+                            if not members_str:
+                                return "无"
+                            try:
+                                member_ids = [int(id_str) for id_str in members_str.split(",")]
+                                return ", ".join([persons_dict.get(m_id, f"ID:{m_id}") for m_id in member_ids])
+                            except:
+                                return members_str
+
+                        display_project = project_info.copy()
+                        display_project['项目负责人'] = display_project['leader_id'].apply(format_leader)
+                        display_project['项目成员'] = display_project['members'].apply(format_members)
+
+                        # 重命名列为中文并选择要显示的列
+                        display_project = display_project.rename(columns={
+                            'id': '项目ID',
+                            'name': '项目名称',
+                            'start_date': '开始日期',
+                            'end_date': '结束日期',
+                            'status': '项目状态',
+                            'outcome': '项目成果'
+                        })
+
+                        # 选择要显示的列
+                        display_columns = ['项目ID', '项目名称', '开始日期', '结束日期', '项目状态', '项目成果', '项目负责人', '项目成员']
+
+                        st.subheader("项目详情")
+                        st.dataframe(display_project[display_columns])
+                        results["项目详情"] = display_project[display_columns]
+
+                # 项目负责人查询
+                if "项目负责人" in query_types:
+                    project_info = pd.read_sql(f"SELECT * FROM project WHERE id = {selected_project}", conn)
+                    if not project_info.empty:
+                        leader_id = project_info['leader_id'].iloc[0]
+                        if leader_id:
+                            leader_query = f"SELECT * FROM person WHERE id = {leader_id}"
+                            leader = pd.read_sql(leader_query, conn)
+                            if not leader.empty:
+                                # 转换为中文列名
+                                display_leader = leader.copy()
+                                display_leader = display_leader.rename(columns={
+                                    'id': '人员ID',
+                                    'name': '姓名',
+                                    'gender': '性别',
+                                    'birth_date': '出生日期',
+                                    'id_card': '身份证号',
+                                    'education': '学历',
+                                    'school': '毕业学校',
+                                    'graduation_date': '毕业日期',
+                                    'major': '专业',
+                                    'title': '职称',
+                                    'phone': '手机号码',
+                                    'department': '部门',
+                                    'position': '职位',
+                                    'skill_level': '技能等级'
+                                })
+
+                                st.subheader("项目负责人")
+                                st.dataframe(display_leader)
+                                results["项目负责人"] = display_leader
+                            else:
+                                st.info("未找到项目负责人信息")
+                        else:
+                            st.info("该项目未设置负责人")
+
+                # 项目成员查询
+                if "项目成员" in query_types:
+                    project_info = pd.read_sql(f"SELECT * FROM project WHERE id = {selected_project}", conn)
+                    if not project_info.empty:
+                        members_str = project_info['members'].iloc[0]
+                        if members_str:
+                            members_list = members_str.split(',')
+                            if members_list:
+                                members_query = f"""
+                                SELECT * FROM person
+                                WHERE id IN ({','.join(members_list)})
+                                """
+                                members = pd.read_sql(members_query, conn)
+                                if not members.empty:
+                                    # 转换为中文列名
+                                    display_members = members.copy()
+                                    display_members = display_members.rename(columns={
+                                        'id': '人员ID',
+                                        'name': '姓名',
+                                        'gender': '性别',
+                                        'birth_date': '出生日期',
+                                        'id_card': '身份证号',
+                                        'education': '学历',
+                                        'school': '毕业学校',
+                                        'graduation_date': '毕业日期',
+                                        'major': '专业',
+                                        'title': '职称',
+                                        'phone': '手机号码',
+                                        'department': '部门',
+                                        'position': '职位',
+                                        'skill_level': '技能等级'
+                                    })
+
+                                    st.subheader("项目成员")
+                                    st.dataframe(display_members)
+                                    results["项目成员"] = display_members
+                                else:
+                                    st.info("未找到项目成员信息")
+                            else:
+                                st.info("该项目未设置成员")
+                        else:
+                            st.info("该项目未设置成员")
+
+                # 导出数据
+                if results:
+                    st.subheader("导出查询结果")
+
+                    # 为每个查询结果创建下载链接
+                    for key, df in results.items():
+                        filename = f"{filename_base}_{key}.xlsx"
+                        download_link = get_excel_download_link(df, filename)
+                        st.markdown(f"{key}: {download_link}", unsafe_allow_html=True)
+
+                    # 创建一个包含所有结果的Excel文件
+                    if len(results) > 1:
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                            for key, df in results.items():
+                                df.to_excel(writer, sheet_name=key[:31], index=False)
+
+                        excel_data = output.getvalue()
+                        b64 = base64.b64encode(excel_data).decode()
+                        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename_base}_全部数据.xlsx">下载所有查询结果</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+
     # 按标准查询
     with query_tab3:
         st.write("根据标准信息查询关联数据")
@@ -307,6 +483,7 @@ def query_management():
         # 获取所有标准数据
         conn = get_connection()
         standards_df = pd.read_sql("SELECT id, name FROM standard", conn)
+        persons_df = pd.read_sql("SELECT id, name FROM person", conn)
 
         if standards_df.empty:
             st.info("暂无标准数据")
@@ -421,6 +598,184 @@ def query_management():
                         b64 = base64.b64encode(excel_data).decode()
                         href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename_base}_全部数据.xlsx">下载所有查询结果</a>'
                         st.markdown(href, unsafe_allow_html=True)
+
+                # 导出数据
+                if results:
+                    st.subheader("导出查询结果")
+
+                    # 为每个查询结果创建下载链接
+                    for key, df in results.items():
+                        filename = f"{filename_base}_{key}.xlsx"
+                        download_link = get_excel_download_link(df, filename)
+                        st.markdown(f"{key}: {download_link}", unsafe_allow_html=True)
+
+                    # 创建一个包含所有结果的Excel文件
+                    if len(results) > 1:
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                            for key, df in results.items():
+                                df.to_excel(writer, sheet_name=key[:31], index=False)
+
+                        excel_data = output.getvalue()
+                        b64 = base64.b64encode(excel_data).decode()
+                        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename_base}_全部数据.xlsx">下载所有查询结果</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+
+    # 按专利查询
+    with query_tab4:
+        st.write("根据专利信息查询关联数据")
+
+        # 获取所有专利数据
+        conn = get_connection()
+        patents_df = pd.read_sql("SELECT id, name FROM patent", conn)
+        persons_df = pd.read_sql("SELECT id, name FROM person", conn)
+
+        if patents_df.empty:
+            st.info("暂无专利数据")
+        else:
+            # 下拉选择专利
+            selected_patent = st.selectbox(
+                "选择专利",
+                options=patents_df['id'].tolist(),
+                format_func=lambda x: patents_df[patents_df['id'] == x]['name'].iloc[0],
+                key="patent_select"
+            )
+
+            # 多选查询类型
+            query_types = st.multiselect(
+                "选择要查询的关联信息",
+                options=["专利详情", "专利所有人", "参与人员"],
+                default=["专利详情", "专利所有人", "参与人员"],
+                key="patent_query_types"
+            )
+
+            if st.button("查询", key="patent_query_button"):
+                results = {}
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename_base = f"专利查询_{patents_df[patents_df['id'] == selected_patent]['name'].iloc[0]}_{timestamp}"
+
+                # 专利详情查询
+                if "专利详情" in query_types:
+                    patent_info = pd.read_sql(f"SELECT * FROM patent WHERE id = {selected_patent}", conn)
+                    if not patent_info.empty:
+                        # 格式化专利数据，将owner_id和participants替换为姓名
+                        persons_dict = dict(zip(persons_df['id'], persons_df['name']))
+
+                        def format_owner(owner_id):
+                            if pd.isna(owner_id) or owner_id is None:
+                                return "无"
+                            return persons_dict.get(owner_id, f"ID:{owner_id}")
+
+                        def format_participants(participants_str):
+                            if not participants_str:
+                                return "无"
+                            try:
+                                participant_ids = [int(id_str) for id_str in participants_str.split(",")]
+                                return ", ".join([persons_dict.get(p_id, f"ID:{p_id}") for p_id in participant_ids])
+                            except:
+                                return participants_str
+
+                        display_patent = patent_info.copy()
+                        display_patent['专利所有人'] = display_patent['owner_id'].apply(format_owner)
+                        display_patent['参与人员'] = display_patent['participants'].apply(format_participants)
+
+                        # 重命名列为中文并选择要显示的列
+                        display_patent = display_patent.rename(columns={
+                            'id': '专利ID',
+                            'name': '专利名称',
+                            'type': '专利类型',
+                            'application_date': '申请日期',
+                            'grant_date': '授权日期',
+                            'company': '申请单位',
+                            'patent_number': '专利号',
+                            'certificate': '证书状态'
+                        })
+
+                        # 选择要显示的列
+                        display_columns = ['专利ID', '专利名称', '专利类型', '专利号', '申请日期', '授权日期', '申请单位', '专利所有人', '参与人员', '证书状态']
+
+                        st.subheader("专利详情")
+                        st.dataframe(display_patent[display_columns])
+                        results["专利详情"] = display_patent[display_columns]
+
+                # 专利所有人查询
+                if "专利所有人" in query_types:
+                    patent_info = pd.read_sql(f"SELECT * FROM patent WHERE id = {selected_patent}", conn)
+                    if not patent_info.empty:
+                        owner_id = patent_info['owner_id'].iloc[0]
+                        if owner_id:
+                            owner_query = f"SELECT * FROM person WHERE id = {owner_id}"
+                            owner = pd.read_sql(owner_query, conn)
+                            if not owner.empty:
+                                # 转换为中文列名
+                                display_owner = owner.copy()
+                                display_owner = display_owner.rename(columns={
+                                    'id': '人员ID',
+                                    'name': '姓名',
+                                    'gender': '性别',
+                                    'birth_date': '出生日期',
+                                    'id_card': '身份证号',
+                                    'education': '学历',
+                                    'school': '毕业学校',
+                                    'graduation_date': '毕业日期',
+                                    'major': '专业',
+                                    'title': '职称',
+                                    'phone': '手机号码',
+                                    'department': '部门',
+                                    'position': '职位',
+                                    'skill_level': '技能等级'
+                                })
+
+                                st.subheader("专利所有人")
+                                st.dataframe(display_owner)
+                                results["专利所有人"] = display_owner
+                            else:
+                                st.info("未找到专利所有人信息")
+                        else:
+                            st.info("该专利未设置所有人")
+
+                # 参与人员查询
+                if "参与人员" in query_types:
+                    patent_info = pd.read_sql(f"SELECT * FROM patent WHERE id = {selected_patent}", conn)
+                    if not patent_info.empty:
+                        participants_str = patent_info['participants'].iloc[0]
+                        if participants_str:
+                            participants_list = participants_str.split(',')
+                            if participants_list:
+                                participants_query = f"""
+                                SELECT * FROM person
+                                WHERE id IN ({','.join(participants_list)})
+                                """
+                                participants = pd.read_sql(participants_query, conn)
+                                if not participants.empty:
+                                    # 转换为中文列名
+                                    display_participants = participants.copy()
+                                    display_participants = display_participants.rename(columns={
+                                        'id': '人员ID',
+                                        'name': '姓名',
+                                        'gender': '性别',
+                                        'birth_date': '出生日期',
+                                        'id_card': '身份证号',
+                                        'education': '学历',
+                                        'school': '毕业学校',
+                                        'graduation_date': '毕业日期',
+                                        'major': '专业',
+                                        'title': '职称',
+                                        'phone': '手机号码',
+                                        'department': '部门',
+                                        'position': '职位',
+                                        'skill_level': '技能等级'
+                                    })
+
+                                    st.subheader("参与人员")
+                                    st.dataframe(display_participants)
+                                    results["参与人员"] = display_participants
+                                else:
+                                    st.info("未找到参与人员信息")
+                            else:
+                                st.info("该专利未设置参与人员")
+                        else:
+                            st.info("该专利未设置参与人员")
 
                 # 导出数据
                 if results:

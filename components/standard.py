@@ -222,34 +222,9 @@ def standard_management():
 
     st.subheader("标准列表")
 
-    # 查询功能
-    search_col1, search_col2 = st.columns(2)
-    with search_col1:
-        search_name = st.text_input("按标准名称搜索")
-    with search_col2:
-        search_type = st.selectbox("按标准性质筛选", ["全部"] + ["国家标准", "行业标准", "地方标准", "团体标准", "企业标准"])
-
-    # 获取标准信息
+    # 直接从数据库获取标准数据
     conn = get_connection()
-
-    # 构建查询条件
-    conditions = []
-    params = []
-
-    if search_name:
-        conditions.append("name LIKE ?")
-        params.append(f"%{search_name}%")
-
-    if search_type != "全部":
-        conditions.append("type = ?")
-        params.append(search_type)
-
-    # 构建SQL查询
-    query = "SELECT * FROM standard"
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    standards_df = pd.read_sql(query, conn, params=params)
+    standards_df = pd.read_sql("SELECT * FROM standard", conn)
 
     # 获取人员信息用于显示
     persons_df = pd.read_sql("SELECT id, name FROM person", conn)

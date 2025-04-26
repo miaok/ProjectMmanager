@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from components.db_utils import get_connection
 import datetime
+from components.validation import validate_id_card, validate_phone
 
 def person_management():
     #st.title("人员管理")
@@ -157,9 +158,19 @@ def person_management():
                 # 表单验证
                 if not name:
                     st.error("姓名不能为空")
-                elif not id_card:
-                    st.error("身份证号不能为空")
                 else:
+                    # 验证身份证号
+                    id_card_valid, id_card_error = validate_id_card(id_card)
+                    if not id_card_valid:
+                        st.error(id_card_error)
+                        return
+
+                    # 验证手机号
+                    phone_valid, phone_error = validate_phone(phone)
+                    if not phone_valid:
+                        st.error(phone_error)
+                        return
+
                     try:
                         conn = get_connection()
                         cursor = conn.cursor()
@@ -209,40 +220,9 @@ def person_management():
 
     st.subheader("人员列表")
 
-    # 查询功能
-    search_col1, search_col2, search_col3 = st.columns(3)
-    with search_col1:
-        search_name = st.text_input("按姓名搜索")
-    with search_col2:
-        search_department = st.text_input("按部门筛选")
-    with search_col3:
-        search_skill = st.selectbox("按技能等级筛选", ["全部", "初级", "中级", "高级", "资深", "专家"])
-
-    # 获取所有人员信息
+    # 直接从数据库获取人员数据
     conn = get_connection()
-
-    # 构建查询条件
-    conditions = []
-    params = []
-
-    if search_name:
-        conditions.append("name LIKE ?")
-        params.append(f"%{search_name}%")
-
-    if search_department:
-        conditions.append("department LIKE ?")
-        params.append(f"%{search_department}%")
-
-    if search_skill != "全部":
-        conditions.append("skill_level = ?")
-        params.append(search_skill)
-
-    # 构建SQL查询
-    query = "SELECT * FROM person"
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    df = pd.read_sql(query, conn, params=params)
+    df = pd.read_sql("SELECT * FROM person", conn)
 
     if not df.empty:
         # 选择显示的列 (不显示ID)

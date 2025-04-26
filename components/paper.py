@@ -229,34 +229,9 @@ def paper_management():
 
     st.subheader("论文列表")
 
-    # 查询功能
-    search_col1, search_col2 = st.columns(2)
-    with search_col1:
-        search_title = st.text_input("按论文标题搜索")
-    with search_col2:
-        search_type = st.selectbox("按期刊类型筛选", ["全部", "核心期刊", "非核心期刊", "EI收录", "SCI收录"])
-
-    # 获取论文信息
+    # 直接从数据库获取论文数据
     conn = get_connection()
-
-    # 构建查询条件
-    conditions = []
-    params = []
-
-    if search_title:
-        conditions.append("title LIKE ?")
-        params.append(f"%{search_title}%")
-
-    if search_type != "全部":
-        conditions.append("journal_type = ?")
-        params.append(search_type)
-
-    # 构建SQL查询
-    query = "SELECT * FROM paper"
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    papers_df = pd.read_sql(query, conn, params=params)
+    papers_df = pd.read_sql("SELECT * FROM paper", conn)
 
     # 获取人员信息用于显示
     persons_df = pd.read_sql("SELECT id, name FROM person", conn)

@@ -245,40 +245,9 @@ def patent_management():
 
     st.subheader("专利列表")
 
-    # 查询功能
-    search_col1, search_col2, search_col3 = st.columns(3)
-    with search_col1:
-        search_name = st.text_input("按专利名称搜索")
-    with search_col2:
-        search_type = st.selectbox("按专利类型筛选", ["全部"] + ["发明专利", "实用新型专利", "外观设计专利"])
-    with search_col3:
-        search_certificate = st.selectbox("按证书状态筛选", ["全部", "有", "无"])
-
-    # 获取专利信息
+    # 直接从数据库获取专利数据
     conn = get_connection()
-
-    # 构建查询条件
-    conditions = []
-    params = []
-
-    if search_name:
-        conditions.append("name LIKE ?")
-        params.append(f"%{search_name}%")
-
-    if search_type != "全部":
-        conditions.append("type = ?")
-        params.append(search_type)
-
-    if search_certificate != "全部":
-        conditions.append("certificate = ?")
-        params.append(search_certificate)
-
-    # 构建SQL查询
-    query = "SELECT * FROM patent"
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    patents_df = pd.read_sql(query, conn, params=params)
+    patents_df = pd.read_sql("SELECT * FROM patent", conn)
 
     # 获取人员信息用于显示
     persons_df = pd.read_sql("SELECT id, name FROM person", conn)

@@ -240,34 +240,9 @@ def project_management():
 
     st.subheader("项目列表")
 
-    # 查询功能
-    search_col1, search_col2 = st.columns(2)
-    with search_col1:
-        search_name = st.text_input("按项目名称搜索")
-    with search_col2:
-        search_status = st.selectbox("按项目状态筛选", ["全部", "进行中", "已完成"])
-
-    # 获取项目信息
+    # 直接从数据库获取项目数据
     conn = get_connection()
-
-    # 构建查询条件
-    conditions = []
-    params = []
-
-    if search_name:
-        conditions.append("name LIKE ?")
-        params.append(f"%{search_name}%")
-
-    if search_status != "全部":
-        conditions.append("status = ?")
-        params.append(search_status)
-
-    # 构建SQL查询
-    query = "SELECT * FROM project"
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    projects_df = pd.read_sql(query, conn, params=params)
+    projects_df = pd.read_sql("SELECT * FROM project", conn)
 
     # 获取人员信息用于显示
     persons_df = pd.read_sql("SELECT id, name FROM person", conn)
