@@ -80,22 +80,6 @@ python generate_data.py
 streamlit run app.py
 ```
 
-## 数据生成
-
-本系统使用独立的数据生成脚本(`generate_data.py`)来创建示例数据，这样做的好处是：
-
-1. 可以方便地修改生成脚本以自定义数据
-2. 可以随时重新生成干净的数据库
-3. 分离数据生成和应用逻辑，使代码更清晰
-
-如果需要自定义生成的数据，可以修改`generate_data.py`文件中的以下参数：
-
-- 生成的人员数量: `generate_person_data(20)`
-- 生成的项目数量: `generate_project_data(person_ids, 15)`
-- 生成的标准数量: `generate_standard_data(person_ids, 15)`
-- 生成的专利数量: `generate_patent_data(person_ids, 30)`
-- 生成的论文数量: `generate_paper_data(person_ids, 25)`
-
 ## 数据结构
 
 1. 人员信息表 (person)：
