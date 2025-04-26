@@ -8,8 +8,27 @@ def project_management():
 
     # 上下布局替代左右分栏
 
-    # 使用expander使添加/编辑表单默认隐藏
-    with st.expander("添加/编辑项目信息", expanded=False):
+    # 初始化会话状态
+    if 'project_edit_mode' not in st.session_state:
+        st.session_state.project_edit_mode = False
+
+    if 'project_selected_id' not in st.session_state:
+        st.session_state.project_selected_id = None
+
+    # 初始化消息状态
+    if 'project_success_message' not in st.session_state:
+        st.session_state.project_success_message = None
+
+    # 初始化expander展开状态
+    if 'project_expander_expanded' not in st.session_state:
+        st.session_state.project_expander_expanded = False
+
+    # 显示持久化的成功消息
+    if st.session_state.project_success_message:
+        st.success(st.session_state.project_success_message)
+
+    # 使用expander，根据会话状态决定是否展开
+    with st.expander("添加/编辑项目信息", expanded=st.session_state.project_expander_expanded):
         # 获取所有项目信息用于编辑
         conn = get_connection()
         projects_df = pd.read_sql("SELECT * FROM project", conn)
@@ -17,26 +36,74 @@ def project_management():
         # 获取所有人员信息用于选择
         persons_df = pd.read_sql("SELECT id, name FROM person", conn)
 
+        # 编辑模式切换回调函数
+        def set_add_mode():
+            st.session_state.project_edit_mode = False
+            st.session_state.project_selected_id = None
+            # 清除成功消息
+            st.session_state.project_success_message = None
+            # 保持expander展开
+            st.session_state.project_expander_expanded = True
+            if 'project_selector' in st.session_state:
+                del st.session_state.project_selector
+
+        def set_edit_mode():
+            st.session_state.project_edit_mode = True
+            # 清除成功消息
+            st.session_state.project_success_message = None
+            # 保持expander展开
+            st.session_state.project_expander_expanded = True
+
+        # 项目选择回调函数
+        def on_project_select():
+            st.session_state.project_selected_id = st.session_state.project_selector
+            # 清除成功消息
+            st.session_state.project_success_message = None
+            # 保持expander展开
+            st.session_state.project_expander_expanded = True
+
+        # 创建两个按钮用于切换模式，使用更紧凑的布局
+        button_cols = st.columns([1, 1, 3])  # 两个按钮占用较小空间，右侧留白
+        with button_cols[0]:
+            st.button("新增信息", on_click=set_add_mode, type="primary" if not st.session_state.project_edit_mode else "secondary")
+        with button_cols[1]:
+            st.button("编辑已有信息", on_click=set_edit_mode, type="primary" if st.session_state.project_edit_mode else "secondary")
+
+        # 获取当前模式
+        edit_mode = st.session_state.project_edit_mode
+
+        # 如果是编辑模式，显示项目选择器
+        if edit_mode and not projects_df.empty:
+            project_id = st.selectbox(
+                "选择要编辑的项目",
+                options=projects_df['id'].tolist(),
+                format_func=lambda x: projects_df[projects_df['id'] == x]['name'].iloc[0],
+                key="project_selector",
+                on_change=on_project_select
+            )
+
+            # 获取选中的项目数据
+            if st.session_state.project_selected_id:
+                project_id = st.session_state.project_selected_id
+                project_data = projects_df[projects_df['id'] == project_id].iloc[0]
+            else:
+                project_data = projects_df[projects_df['id'] == project_id].iloc[0]
+                st.session_state.project_selected_id = project_id
+
+            # 获取已有成员
+            if project_data['members']:
+                current_members = [int(m) for m in project_data['members'].split(',') if m]
+            else:
+                current_members = []
+        else:
+            project_id = None
+            project_data = pd.Series({"name": "", "start_date": None, "end_date": None,
+                                    "members": "", "leader_id": None, "outcome": "", "status": "进行中"})
+            current_members = []
+            st.session_state.project_selected_id = None
+
         # 表单用于添加或编辑项目
         with st.form("project_form"):
-            # 如果是编辑模式，需要选择项目
-            edit_mode = st.checkbox("编辑已有项目")
-
-            if edit_mode and not projects_df.empty:
-                project_id = st.selectbox("选择要编辑的项目", projects_df['id'].tolist(),
-                                        format_func=lambda x: projects_df[projects_df['id'] == x]['name'].iloc[0])
-                project_data = projects_df[projects_df['id'] == project_id].iloc[0]
-
-                # 获取已有成员
-                if project_data['members']:
-                    current_members = [int(m) for m in project_data['members'].split(',') if m]
-                else:
-                    current_members = []
-            else:
-                project_id = None
-                project_data = pd.Series({"name": "", "start_date": None, "end_date": None,
-                                        "members": "", "leader_id": None, "outcome": "", "status": "进行中"})
-                current_members = []
 
             # 表单字段
             col1, col2, col3 = st.columns(3)
@@ -139,21 +206,27 @@ def project_management():
                         # 处理成员列表
                         members_str = ",".join([str(m) for m in members])
 
-                        if edit_mode and project_id:
+                        if st.session_state.project_edit_mode and st.session_state.project_selected_id:
                             # 更新现有记录
                             cursor.execute('''
                                 UPDATE project SET name=?, start_date=?, end_date=?, members=?,
                                 leader_id=?, outcome=?, status=? WHERE id=?
                             ''', (name, start_date_str, end_date_str, members_str,
-                                 leader_id, outcome, status, project_id))
-                            st.success(f"已更新项目 {name} 的信息")
+                                 leader_id, outcome, status, st.session_state.project_selected_id))
+                            # 保存成功消息到会话状态
+                            st.session_state.project_success_message = f"已更新项目 {name} 的信息"
+                            # 保持expander展开
+                            st.session_state.project_expander_expanded = True
                         else:
                             # 新增记录
                             cursor.execute('''
                                 INSERT INTO project (name, start_date, end_date, members, leader_id, outcome, status)
                                 VALUES (?, ?, ?, ?, ?, ?, ?)
                             ''', (name, start_date_str, end_date_str, members_str, leader_id, outcome, status))
-                            st.success(f"已添加项目 {name} 的信息")
+                            # 保存成功消息到会话状态
+                            st.session_state.project_success_message = f"已添加项目 {name} 的信息"
+                            # 保持expander展开
+                            st.session_state.project_expander_expanded = True
 
                         conn.commit()
                         conn.close()
@@ -267,7 +340,10 @@ def project_management():
                     cursor.execute("DELETE FROM project WHERE id = ?", (del_id,))
                     conn.commit()
                     conn.close()
-                    st.success("已删除项目")
+                    # 保存成功消息到会话状态
+                    st.session_state.project_success_message = "已删除项目"
+                    # 保持expander展开
+                    st.session_state.project_expander_expanded = True
                     st.rerun()
                 except Exception as e:
                     st.error(f"删除失败: {str(e)}")

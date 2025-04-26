@@ -5,64 +5,6 @@ import os
 def get_connection():
     return sqlite3.connect('project_manager.db')
 
-# 更新数据库结构
-def update_db_structure():
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # 检查项目表是否已有status字段
-        cursor.execute("PRAGMA table_info(project)")
-        columns = cursor.fetchall()
-        column_names = [column[1] for column in columns]
-        
-        # 项目表添加status字段
-        if 'status' not in column_names:
-            cursor.execute('ALTER TABLE project ADD COLUMN status TEXT DEFAULT "进行中"')
-            print("项目表已添加status字段")
-        
-        # 专利表添加certificate字段
-        cursor.execute("PRAGMA table_info(patent)")
-        columns = cursor.fetchall()
-        column_names = [column[1] for column in columns]
-        
-        if 'certificate' not in column_names:
-            cursor.execute('ALTER TABLE patent ADD COLUMN certificate TEXT DEFAULT "无"')
-            print("专利表已添加certificate字段")
-        
-        # 论文表添加volume_info字段
-        cursor.execute("PRAGMA table_info(paper)")
-        columns = cursor.fetchall()
-        column_names = [column[1] for column in columns]
-        
-        if 'volume_info' not in column_names:
-            cursor.execute('ALTER TABLE paper ADD COLUMN volume_info TEXT')
-            print("论文表已添加volume_info字段")
-        
-        # 人员表添加department、position和skill_level字段
-        cursor.execute("PRAGMA table_info(person)")
-        columns = cursor.fetchall()
-        column_names = [column[1] for column in columns]
-        
-        if 'department' not in column_names:
-            cursor.execute('ALTER TABLE person ADD COLUMN department TEXT')
-            print("人员表已添加department字段")
-            
-        if 'position' not in column_names:
-            cursor.execute('ALTER TABLE person ADD COLUMN position TEXT')
-            print("人员表已添加position字段")
-            
-        if 'skill_level' not in column_names:
-            cursor.execute('ALTER TABLE person ADD COLUMN skill_level TEXT')
-            print("人员表已添加skill_level字段")
-            
-        conn.commit()
-        print("数据库结构更新完成")
-    except Exception as e:
-        print(f"更新数据库结构失败: {str(e)}")
-    finally:
-        conn.close()
-
 # 检查数据库是否存在并初始化
 def init_db():
     # 检查数据库文件是否存在
@@ -157,9 +99,6 @@ def init_db():
         
         conn.commit()
         conn.close()
-    else:
-        # 如果数据库存在，更新其结构
-        update_db_structure()
     
     # 验证表是否存在
     conn = get_connection()

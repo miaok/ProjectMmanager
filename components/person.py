@@ -8,27 +8,95 @@ def person_management():
 
     # 上下布局替代左右分栏
 
-    # 使用expander使添加/编辑表单默认隐藏
-    with st.expander("添加/编辑人员信息", expanded=False):
+    # 初始化会话状态
+    if 'person_edit_mode' not in st.session_state:
+        st.session_state.person_edit_mode = False
+
+    if 'person_selected_id' not in st.session_state:
+        st.session_state.person_selected_id = None
+
+    # 初始化消息状态
+    if 'person_success_message' not in st.session_state:
+        st.session_state.person_success_message = None
+
+    # 初始化expander展开状态
+    if 'person_expander_expanded' not in st.session_state:
+        st.session_state.person_expander_expanded = False
+
+    # 显示持久化的成功消息
+    if st.session_state.person_success_message:
+        st.success(st.session_state.person_success_message)
+
+    # 使用expander，根据会话状态决定是否展开
+    with st.expander("添加/编辑人员信息", expanded=st.session_state.person_expander_expanded):
         # 获取所有人员信息用于编辑
         conn = get_connection()
         df = pd.read_sql("SELECT * FROM person", conn)
         conn.close()
 
-        # 表单用于添加或编辑人员
-        with st.form("person_form"):
-            # 如果是编辑模式，需要选择人员
-            edit_mode = st.checkbox("编辑已有人员")
+        # 编辑模式切换回调函数
+        def set_add_mode():
+            st.session_state.person_edit_mode = False
+            st.session_state.person_selected_id = None
+            # 清除成功消息
+            st.session_state.person_success_message = None
+            # 保持expander展开
+            st.session_state.person_expander_expanded = True
+            if 'person_selector' in st.session_state:
+                del st.session_state.person_selector
 
-            if edit_mode and not df.empty:
-                person_id = st.selectbox("选择要编辑的人员", df['id'].tolist(), format_func=lambda x: df[df['id'] == x]['name'].iloc[0])
+        def set_edit_mode():
+            st.session_state.person_edit_mode = True
+            # 清除成功消息
+            st.session_state.person_success_message = None
+            # 保持expander展开
+            st.session_state.person_expander_expanded = True
+
+        # 人员选择回调函数
+        def on_person_select():
+            st.session_state.person_selected_id = st.session_state.person_selector
+            # 清除成功消息
+            st.session_state.person_success_message = None
+            # 保持expander展开
+            st.session_state.person_expander_expanded = True
+
+        # 创建两个按钮用于切换模式，使用更紧凑的布局
+        button_cols = st.columns([1, 1, 3])  # 两个按钮占用较小空间，右侧留白
+        with button_cols[0]:
+            st.button("新增信息", on_click=set_add_mode, type="primary" if not st.session_state.person_edit_mode else "secondary")
+        with button_cols[1]:
+            st.button("编辑已有信息", on_click=set_edit_mode, type="primary" if st.session_state.person_edit_mode else "secondary")
+
+        # 获取当前模式
+        edit_mode = st.session_state.person_edit_mode
+
+        # 如果是编辑模式，显示人员选择器
+        if edit_mode and not df.empty:
+            person_id = st.selectbox(
+                "选择要编辑的人员",
+                options=df['id'].tolist(),
+                format_func=lambda x: df[df['id'] == x]['name'].iloc[0],
+                key="person_selector",
+                on_change=on_person_select
+            )
+
+            # 获取选中的人员数据
+            if st.session_state.person_selected_id:
+                person_id = st.session_state.person_selected_id
                 person_data = df[df['id'] == person_id].iloc[0]
             else:
-                person_id = None
-                person_data = pd.Series({"name": "", "gender": "男", "birth_date": None, "id_card": "",
-                                         "education": "本科", "school": "", "graduation_date": None,
-                                         "major": "", "title": "", "phone": "", "department": "",
-                                         "position": "", "skill_level": ""})
+                person_data = df[df['id'] == person_id].iloc[0]
+                st.session_state.person_selected_id = person_id
+        else:
+            person_id = None
+            person_data = pd.Series({"name": "", "gender": "男", "birth_date": None, "id_card": "",
+                                     "education": "本科", "school": "", "graduation_date": None,
+                                     "major": "", "title": "", "phone": "", "department": "",
+                                     "position": "", "skill_level": ""})
+            st.session_state.person_selected_id = None
+
+        # 表单用于添加或编辑人员
+        with st.form("person_form"):
 
             # 将表单字段分为两列
             col1, col2, col3 = st.columns(3)
@@ -100,7 +168,7 @@ def person_management():
                         birth_date_str = birth_date.strftime("%Y-%m-%d")
                         graduation_date_str = graduation_date.strftime("%Y-%m-%d")
 
-                        if edit_mode and person_id:
+                        if st.session_state.person_edit_mode and st.session_state.person_selected_id:
                             # 更新现有记录
                             cursor.execute('''
                                 UPDATE person SET name=?, gender=?, birth_date=?, id_card=?,
@@ -109,8 +177,11 @@ def person_management():
                                 WHERE id=?
                             ''', (name, gender, birth_date_str, id_card, education, school,
                                  graduation_date_str, major, title, phone, department, position,
-                                 skill_level, person_id))
-                            st.success(f"已更新 {name} 的信息")
+                                 skill_level, st.session_state.person_selected_id))
+                            # 保存成功消息到会话状态
+                            st.session_state.person_success_message = f"已更新 {name} 的信息"
+                            # 保持expander展开
+                            st.session_state.person_expander_expanded = True
                         else:
                             # 新增记录
                             cursor.execute('''
@@ -121,7 +192,10 @@ def person_management():
                             ''', (name, gender, birth_date_str, id_card, education, school,
                                  graduation_date_str, major, title, phone, department, position,
                                  skill_level))
-                            st.success(f"已添加 {name} 的信息")
+                            # 保存成功消息到会话状态
+                            st.session_state.person_success_message = f"已添加 {name} 的信息"
+                            # 保持expander展开
+                            st.session_state.person_expander_expanded = True
 
                         conn.commit()
                         conn.close()
@@ -324,7 +398,10 @@ def person_management():
                         # 删除人员
                         cursor.execute("DELETE FROM person WHERE id = ?", (del_id,))
                         conn.commit()
-                        st.success(f"已删除人员，并从 {len(affected_projects)} 个项目的成员列表中移除")
+                        # 保存成功消息到会话状态
+                        st.session_state.person_success_message = f"已删除人员，并从 {len(affected_projects)} 个项目的成员列表中移除"
+                        # 保持expander展开
+                        st.session_state.person_expander_expanded = True
                         st.rerun()
 
                     conn.close()
