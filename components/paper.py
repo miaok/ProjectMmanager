@@ -287,8 +287,8 @@ def paper_management():
         display_df['第一作者'] = display_df['first_author_id'].apply(format_first_author)
         display_df['参与作者'] = display_df['co_authors'].apply(format_co_authors)
 
-        # 显示论文列表
-        display_columns = ['id', 'title', 'journal', 'journal_type', 'publish_date', 'volume_info', '第一作者', 'organization']
+        # 显示论文列表 (不显示ID)
+        display_columns = ['title', 'journal', 'journal_type', 'publish_date', 'volume_info', '第一作者', 'organization']
         st.dataframe(display_df[display_columns])
 
         # 详细信息查看和删除选项

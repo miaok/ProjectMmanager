@@ -261,8 +261,8 @@ def standard_management():
         display_df['participant'] = display_df['participant_id'].apply(
             lambda x: persons_dict.get(x, "无") if x else "无")
 
-        # 显示标准列表
-        display_columns = ['id', 'name', 'type', 'code', 'release_date', 'implementation_date', 'company', 'participant']
+        # 显示标准列表 (不显示ID)
+        display_columns = ['name', 'type', 'code', 'release_date', 'implementation_date', 'company', 'participant']
         st.dataframe(display_df[display_columns])
 
         # 详细信息查看和删除选项

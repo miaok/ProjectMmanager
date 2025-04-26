@@ -132,8 +132,8 @@ def query_management():
                             'outcome': '项目成果'
                         })
 
-                        # 选择要显示的列
-                        display_columns = ['项目ID', '项目名称', '开始日期', '结束日期', '项目负责人', '项目成员', '项目成果']
+                        # 选择要显示的列 (不显示ID)
+                        display_columns = ['项目名称', '开始日期', '结束日期', '项目负责人', '项目成员', '项目成果']
 
                         st.subheader("关联项目")
                         st.dataframe(display_projects[display_columns])
@@ -169,8 +169,8 @@ def query_management():
                             'company': '参与单位'
                         })
 
-                        # 选择要显示的列
-                        display_columns = ['标准ID', '标准名称', '标准类型', '标准号', '发布日期', '实施日期', '参与单位', '参与人员']
+                        # 选择要显示的列 (不显示ID)
+                        display_columns = ['标准名称', '标准类型', '标准号', '发布日期', '实施日期', '参与单位', '参与人员']
 
                         st.subheader("关联标准")
                         st.dataframe(display_standards[display_columns])
@@ -219,8 +219,8 @@ def query_management():
                             'patent_number': '专利号'
                         })
 
-                        # 选择要显示的列
-                        display_columns = ['专利ID', '专利名称', '专利类型', '专利号', '申请日期', '授权日期', '申请单位', '专利所有人', '参与人员']
+                        # 选择要显示的列 (不显示ID)
+                        display_columns = ['专利名称', '专利类型', '专利号', '申请日期', '授权日期', '申请单位', '专利所有人', '参与人员']
 
                         st.subheader("关联专利")
                         st.dataframe(display_patents[display_columns])
@@ -268,8 +268,8 @@ def query_management():
                             'organization': '作者单位'
                         })
 
-                        # 选择要显示的列
-                        display_columns = ['论文ID', '论文标题', '期刊名称', '期刊类型', '发表日期', '作者单位', '第一作者', '参与作者']
+                        # 选择要显示的列 (不显示ID)
+                        display_columns = ['论文标题', '期刊名称', '期刊类型', '发表日期', '作者单位', '第一作者', '参与作者']
 
                         st.subheader("关联论文")
                         st.dataframe(display_papers[display_columns])
@@ -391,8 +391,8 @@ def query_management():
                                     'phone': '手机号码'
                                 })
 
-                                # 选择要显示的重要字段
-                                display_columns = ['人员ID', '姓名', '性别', '学历', '专业', '职称', '手机号码']
+                                # 选择要显示的重要字段 (不显示ID)
+                                display_columns = ['姓名', '性别', '学历', '专业', '职称', '手机号码']
 
                                 st.subheader("参与人员")
                                 st.dataframe(display_participant[display_columns])
@@ -511,8 +511,8 @@ def query_management():
                             'organization': '作者单位'
                         })
 
-                        # 选择要显示的列
-                        display_columns = ['论文ID', '论文标题', '期刊名称', '期刊类型', '发表日期', '作者单位', '第一作者', '参与作者']
+                        # 选择要显示的列 (不显示ID)
+                        display_columns = ['论文标题', '期刊名称', '期刊类型', '发表日期', '作者单位', '第一作者', '参与作者']
 
                         st.subheader("论文详情")
                         st.dataframe(display_paper[display_columns])
@@ -544,8 +544,8 @@ def query_management():
                                     'phone': '手机号码'
                                 })
 
-                                # 选择要显示的重要字段
-                                display_columns = ['人员ID', '姓名', '性别', '学历', '专业', '职称', '手机号码']
+                                # 选择要显示的重要字段 (不显示ID)
+                                display_columns = ['姓名', '性别', '学历', '专业', '职称', '手机号码']
 
                                 st.subheader("第一作者")
                                 st.dataframe(display_first_author[display_columns])
@@ -584,8 +584,8 @@ def query_management():
                                         'phone': '手机号码'
                                     })
 
-                                    # 选择要显示的重要字段
-                                    display_columns = ['人员ID', '姓名', '性别', '学历', '专业', '职称', '手机号码']
+                                    # 选择要显示的重要字段 (不显示ID)
+                                    display_columns = ['姓名', '性别', '学历', '专业', '职称', '手机号码']
 
                                     st.subheader("参与作者")
                                     st.dataframe(display_co_authors[display_columns])

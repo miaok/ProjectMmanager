@@ -245,8 +245,8 @@ def person_management():
     df = pd.read_sql(query, conn, params=params)
 
     if not df.empty:
-        # 选择显示的列
-        display_columns = ['id', 'name', 'gender', 'department', 'position', 'education', 'title', 'skill_level', 'phone']
+        # 选择显示的列 (不显示ID)
+        display_columns = ['name', 'gender', 'department', 'position', 'education', 'title', 'skill_level', 'phone']
         st.dataframe(df[display_columns])
 
         # 详细信息查看和删除选项

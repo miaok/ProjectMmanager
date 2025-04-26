@@ -309,8 +309,8 @@ def patent_management():
         display_df['授权日期'] = display_df['grant_date']
         display_df['证书状态'] = display_df['certificate']
 
-        # 显示专利列表
-        display_columns = ['id', 'name', 'type', '申请日期', '授权日期', '专利所有人', 'patent_number', '证书状态']
+        # 显示专利列表 (不显示ID)
+        display_columns = ['name', 'type', '申请日期', '授权日期', '专利所有人', 'patent_number', '证书状态']
         st.dataframe(display_df[display_columns])
 
         # 详细信息查看和删除选项

@@ -281,8 +281,8 @@ def project_management():
             lambda x: persons_dict.get(x, "未找到 (可能已被删除)") if x and x in persons_dict else "无" if not x else "未找到 (可能已被删除)"
         )
 
-        # 显示项目列表
-        display_columns = ['id', 'name', 'start_date', 'end_date', 'leader', 'status', 'outcome']
+        # 显示项目列表 (不显示ID)
+        display_columns = ['name', 'start_date', 'end_date', 'leader', 'status', 'outcome']
         st.dataframe(display_df[display_columns])
 
         # 详细信息查看和删除选项
@@ -372,7 +372,8 @@ def show_statistics():
 
     if not stats_df.empty:
         st.subheader("人员参与项目统计")
-        st.dataframe(stats_df)
+        # 不显示ID列
+        st.dataframe(stats_df[['name', 'project_count']])
 
         # 可视化
         st.bar_chart(stats_df.set_index('name')['project_count'])
