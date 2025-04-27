@@ -83,7 +83,16 @@ def query_management():
                         st.subheader("基本信息")
                         # 使用自定义表格显示工具
                         display_df = translate_columns(display_person)
-                        st.dataframe(display_df)
+                        # 移除ID列
+                        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                        if id_columns:
+                            display_df = display_df.drop(columns=id_columns)
+
+                        # 重置索引，使其从1开始计数
+                        display_df = display_df.reset_index(drop=True)
+                        display_df.index = display_df.index + 1  # 索引从1开始
+
+                        st.dataframe(display_df, hide_index=False, use_container_width=True)
                         results["基本信息"] = display_person
 
                 # 关联项目查询
@@ -141,7 +150,16 @@ def query_management():
                         st.subheader("关联项目")
                         # 使用自定义表格显示工具
                         display_df = translate_columns(display_projects[display_columns])
-                        st.dataframe(display_df)
+                        # 移除ID列
+                        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                        if id_columns:
+                            display_df = display_df.drop(columns=id_columns)
+
+                        # 重置索引，使其从1开始计数
+                        display_df = display_df.reset_index(drop=True)
+                        display_df.index = display_df.index + 1  # 索引从1开始
+
+                        st.dataframe(display_df, hide_index=False, use_container_width=True)
                         results["关联项目"] = display_projects[display_columns]
                     else:
                         st.info("该人员未参与任何项目")
@@ -180,7 +198,16 @@ def query_management():
                         st.subheader("关联标准")
                         # 使用自定义表格显示工具
                         display_df = translate_columns(display_standards[display_columns])
-                        st.dataframe(display_df)
+                        # 移除ID列
+                        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                        if id_columns:
+                            display_df = display_df.drop(columns=id_columns)
+
+                        # 重置索引，使其从1开始计数
+                        display_df = display_df.reset_index(drop=True)
+                        display_df.index = display_df.index + 1  # 索引从1开始
+
+                        st.dataframe(display_df, hide_index=False, use_container_width=True)
                         results["关联标准"] = display_standards[display_columns]
                     else:
                         st.info("该人员未参与任何标准")
@@ -232,7 +259,16 @@ def query_management():
                         st.subheader("关联专利")
                         # 使用自定义表格显示工具
                         display_df = translate_columns(display_patents[display_columns])
-                        st.dataframe(display_df)
+                        # 移除ID列
+                        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                        if id_columns:
+                            display_df = display_df.drop(columns=id_columns)
+
+                        # 重置索引，使其从1开始计数
+                        display_df = display_df.reset_index(drop=True)
+                        display_df.index = display_df.index + 1  # 索引从1开始
+
+                        st.dataframe(display_df, hide_index=False, use_container_width=True)
                         results["关联专利"] = display_patents[display_columns]
                     else:
                         st.info("该人员未关联任何专利")
@@ -283,7 +319,16 @@ def query_management():
                         st.subheader("关联论文")
                         # 使用自定义表格显示工具
                         display_df = translate_columns(display_papers[display_columns])
-                        st.dataframe(display_df)
+                        # 移除ID列
+                        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                        if id_columns:
+                            display_df = display_df.drop(columns=id_columns)
+
+                        # 重置索引，使其从1开始计数
+                        display_df = display_df.reset_index(drop=True)
+                        display_df.index = display_df.index + 1  # 索引从1开始
+
+                        st.dataframe(display_df, hide_index=False, use_container_width=True)
                         results["关联论文"] = display_papers[display_columns]
                     else:
                         st.info("该人员未关联任何论文")
@@ -417,7 +462,17 @@ def query_management():
                                 })
 
                                 st.subheader("项目负责人")
-                                st.dataframe(display_leader)
+                                # 移除ID列
+                                display_df = display_leader.copy()
+                                id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                                if id_columns:
+                                    display_df = display_df.drop(columns=id_columns)
+
+                                # 重置索引，使其从1开始计数
+                                display_df = display_df.reset_index(drop=True)
+                                display_df.index = display_df.index + 1  # 索引从1开始
+
+                                st.dataframe(display_df, hide_index=False, use_container_width=True)
                                 results["项目负责人"] = display_leader
                             else:
                                 st.info("未找到项目负责人信息")
@@ -458,7 +513,17 @@ def query_management():
                                     })
 
                                     st.subheader("项目成员")
-                                    st.dataframe(display_members)
+                                    # 移除ID列
+                                    display_df = display_members.copy()
+                                    id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                                    if id_columns:
+                                        display_df = display_df.drop(columns=id_columns)
+
+                                    # 重置索引，使其从1开始计数
+                                    display_df = display_df.reset_index(drop=True)
+                                    display_df.index = display_df.index + 1  # 索引从1开始
+
+                                    st.dataframe(display_df, hide_index=False, use_container_width=True)
                                     results["项目成员"] = display_members
                                 else:
                                     st.info("未找到项目成员信息")

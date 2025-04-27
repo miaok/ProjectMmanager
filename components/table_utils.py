@@ -71,9 +71,6 @@ COLUMN_TRANSLATIONS = {
     '数据类型': '数据类型'
 }
 
-# 以下字典已不再使用，保留注释以便于理解代码历史
-# 现在使用Streamlit内置的列选择功能替代
-
 # 原默认显示列定义
 # DEFAULT_DISPLAY_COLUMNS = {
 #     'person': ['姓名', '性别', '部门', '职位', '学历', '职称', '技能等级', '电话'],
@@ -149,12 +146,10 @@ def translate_columns(df, entity_type=None):
 
     return display_df
 
-# 此函数已被移除，使用Streamlit内置的列选择功能替代
-# 保留注释以便于理解代码历史
-
 def display_dataframe(df, entity_type, key_suffix=None):
     """
     使用dashboard风格显示DataFrame，支持内置的列选择和排序功能
+    默认不显示ID列和index列
 
     参数:
     - df: 要显示的DataFrame
@@ -168,6 +163,11 @@ def display_dataframe(df, entity_type, key_suffix=None):
 
     # 翻译列名
     display_df = translate_columns(df, entity_type)
+
+    # 移除ID列（包括'id'和任何以'ID'结尾的列）
+    id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+    if id_columns:
+        display_df = display_df.drop(columns=id_columns)
 
     # 创建列配置
     column_config = {}
@@ -234,10 +234,14 @@ def display_dataframe(df, entity_type, key_suffix=None):
             "组织/单位": st.column_config.TextColumn("组织/单位")
         }
 
-    # 显示DataFrame，使用dashboard风格
+    # 重置索引，使其从1开始计数
+    display_df = display_df.reset_index(drop=True)
+    display_df.index = display_df.index + 1  # 索引从1开始
+
+    # 显示DataFrame，使用dashboard风格，显示索引列
     st.dataframe(
         display_df,
         column_config=column_config,
-        hide_index=True,
+        hide_index=False,  # 显示索引列
         use_container_width=True
     )

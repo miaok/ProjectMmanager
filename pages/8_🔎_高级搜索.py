@@ -299,9 +299,29 @@ with search_tab_global:
                             }
                             display_df = df[display_columns].copy()
                             display_df = display_df.rename(columns=rename_dict)
-                            st.dataframe(display_df)
+
+                            # 移除ID列（包括'id'和任何以'ID'结尾的列）
+                            id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                            if id_columns:
+                                display_df = display_df.drop(columns=id_columns)
+
+                            # 重置索引，使其从1开始计数
+                            display_df = display_df.reset_index(drop=True)
+                            display_df.index = display_df.index + 1  # 索引从1开始
+
+                            st.dataframe(display_df, hide_index=False, use_container_width=True)
                         else:
-                            st.dataframe(df)
+                            # 移除ID列（包括'id'和任何以'ID'结尾的列）
+                            display_df = df.copy()
+                            id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+                            if id_columns:
+                                display_df = display_df.drop(columns=id_columns)
+
+                            # 重置索引，使其从1开始计数
+                            display_df = display_df.reset_index(drop=True)
+                            display_df.index = display_df.index + 1  # 索引从1开始
+
+                            st.dataframe(display_df, hide_index=False, use_container_width=True)
 
                 # 合并所有结果用于导出
                 all_results = []

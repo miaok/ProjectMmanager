@@ -42,7 +42,17 @@ with stats_tab1:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("性别分布")
-            st.dataframe(gender_df)
+            # 移除ID列
+            display_df = gender_df.copy()
+            id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+            if id_columns:
+                display_df = display_df.drop(columns=id_columns)
+
+            # 重置索引，使其从1开始计数
+            display_df = display_df.reset_index(drop=True)
+            display_df.index = display_df.index + 1  # 索引从1开始
+
+            st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         with col2:
             fig = px.pie(gender_df, values='count', names='gender', title='性别分布',
@@ -70,7 +80,17 @@ with stats_tab1:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("学历分布")
-            st.dataframe(edu_df)
+            # 移除ID列
+            display_df = edu_df.copy()
+            id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+            if id_columns:
+                display_df = display_df.drop(columns=id_columns)
+
+            # 重置索引，使其从1开始计数
+            display_df = display_df.reset_index(drop=True)
+            display_df.index = display_df.index + 1  # 索引从1开始
+
+            st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         with col2:
             fig = px.pie(edu_df, values='count', names='education', title='学历分布',
@@ -166,7 +186,17 @@ with stats_tab1:
             contribution_df['paper_co_author_count'] * 0.5
         )
 
-        st.dataframe(contribution_df.sort_values(by='total_contribution', ascending=False))
+        # 移除ID列
+        display_df = contribution_df.sort_values(by='total_contribution', ascending=False).copy()
+        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+        if id_columns:
+            display_df = display_df.drop(columns=id_columns)
+
+        # 重置索引，使其从1开始计数
+        display_df = display_df.reset_index(drop=True)
+        display_df.index = display_df.index + 1  # 索引从1开始
+
+        st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         # 可视化 - 堆叠柱状图
         fig = px.bar(
@@ -269,7 +299,17 @@ with stats_tab1:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.dataframe(dept_df)
+            # 移除ID列
+            display_df = dept_df.copy()
+            id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+            if id_columns:
+                display_df = display_df.drop(columns=id_columns)
+
+            # 重置索引，使其从1开始计数
+            display_df = display_df.reset_index(drop=True)
+            display_df.index = display_df.index + 1  # 索引从1开始
+
+            st.dataframe(display_df, hide_index=False, use_container_width=True)
 
             # 饼图
             fig = px.pie(
@@ -317,7 +357,17 @@ with stats_tab2:
 
     if not duration_df.empty:
         duration_df['duration_months'] = (duration_df['duration_days'] / 30).round(1)
-        st.dataframe(duration_df[['name', 'start_date', 'end_date', 'duration_months']])
+        # 移除ID列
+        display_df = duration_df[['name', 'start_date', 'end_date', 'duration_months']].copy()
+        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+        if id_columns:
+            display_df = display_df.drop(columns=id_columns)
+
+        # 重置索引，使其从1开始计数
+        display_df = display_df.reset_index(drop=True)
+        display_df.index = display_df.index + 1  # 索引从1开始
+
+        st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         # 可视化
         st.bar_chart(duration_df.set_index('name')['duration_months'])
@@ -333,7 +383,17 @@ with stats_tab2:
     edu_df = pd.read_sql(edu_query, conn)
 
     if not edu_df.empty:
-        st.dataframe(edu_df)
+        # 移除ID列
+        display_df = edu_df.copy()
+        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+        if id_columns:
+            display_df = display_df.drop(columns=id_columns)
+
+        # 重置索引，使其从1开始计数
+        display_df = display_df.reset_index(drop=True)
+        display_df.index = display_df.index + 1  # 索引从1开始
+
+        st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         # 使用 plotly 绘制饼图
         fig = px.pie(edu_df, values='count', names='education', title='学历分布')
@@ -360,7 +420,17 @@ with stats_tab2:
     trend_df = pd.read_sql(trend_query, conn)
 
     if not trend_df.empty and not trend_df['year'].iloc[0] is None:
-        st.dataframe(trend_df)
+        # 移除ID列
+        display_df = trend_df.copy()
+        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+        if id_columns:
+            display_df = display_df.drop(columns=id_columns)
+
+        # 重置索引，使其从1开始计数
+        display_df = display_df.reset_index(drop=True)
+        display_df.index = display_df.index + 1  # 索引从1开始
+
+        st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         # 使用 plotly 绘制折线图
         fig = go.Figure()
@@ -460,7 +530,17 @@ with stats_tab3:
     comparison_df = pd.read_sql(comparison_query, conn)
 
     if not comparison_df.empty:
-        st.dataframe(comparison_df)
+        # 移除ID列
+        display_df = comparison_df.copy()
+        id_columns = [col for col in display_df.columns if col.lower() == 'id' or col.endswith('ID') or col == 'ID']
+        if id_columns:
+            display_df = display_df.drop(columns=id_columns)
+
+        # 重置索引，使其从1开始计数
+        display_df = display_df.reset_index(drop=True)
+        display_df.index = display_df.index + 1  # 索引从1开始
+
+        st.dataframe(display_df, hide_index=False, use_container_width=True)
 
         # 使用plotly创建堆叠柱状图
         fig = px.bar(comparison_df, x='name', y=['project_count', 'standard_count'],
