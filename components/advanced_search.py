@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from components.db_utils import get_connection
+from components.table_utils import translate_columns, get_display_columns, display_dataframe
 
 def advanced_search(entity_type):
     """
@@ -440,12 +441,8 @@ def advanced_search(entity_type):
             # 显示结果表格
             display_df = df.copy()
 
-            # 选择要显示的列
-            if entity_type in display_fields:
-                display_columns = [col for col in current_display if col in display_df.columns]
-                st.dataframe(display_df[display_columns])
-            else:
-                st.dataframe(display_df)
+            # 使用自定义表格显示工具
+            display_dataframe(display_df, entity_type, key_suffix=f"search_{current_page}")
 
             return df
 

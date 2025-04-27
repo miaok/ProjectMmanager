@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from components.db_utils import get_connection
 import datetime
+from components.table_utils import translate_columns, display_dataframe
 
 def standard_management():
     #st.title("标准管理")
@@ -233,12 +234,25 @@ def standard_management():
     if not standards_df.empty:
         # 格式化显示数据
         display_df = standards_df.copy()
-        display_df['participant'] = display_df['participant_id'].apply(
-            lambda x: persons_dict.get(x, "无") if x else "无")
 
-        # 显示标准列表 (不显示ID)
-        display_columns = ['name', 'type', 'code', 'release_date', 'implementation_date', 'company', 'participant']
-        st.dataframe(display_df[display_columns])
+        # 创建一个新的DataFrame，只包含我们需要的列，避免重复列名问题
+        formatted_df = pd.DataFrame()
+
+        # 复制原始列
+        formatted_df['id'] = display_df['id']
+        formatted_df['standard_name'] = display_df['name']  # 使用standard_name作为列名，以便正确翻译为"标准名称"
+        formatted_df['type'] = display_df['type']
+        formatted_df['code'] = display_df['code']
+        formatted_df['release_date'] = display_df['release_date']
+        formatted_df['implementation_date'] = display_df['implementation_date']
+
+        # 添加格式化的字段
+        formatted_df['参与人员'] = display_df['participant_id'].apply(
+            lambda x: persons_dict.get(x, "无") if x else "无")
+        formatted_df['单位'] = display_df['company']
+
+        # 使用自定义表格显示工具
+        display_dataframe(formatted_df, 'standard')
 
         # 详细信息查看和删除选项
         col_view, col_del = st.columns(2)
@@ -309,7 +323,9 @@ def show_standard_statistics():
 
     if not type_df.empty:
         st.subheader("标准性质分布")
-        st.dataframe(type_df)
+        # 翻译列名
+        display_df = translate_columns(type_df)
+        st.dataframe(display_df)
 
         # 可视化
         st.bar_chart(type_df.set_index('type')['count'])
@@ -325,7 +341,9 @@ def show_standard_statistics():
 
     if not year_df.empty:
         st.subheader("标准发布年份分布")
-        st.dataframe(year_df)
+        # 翻译列名
+        display_df = translate_columns(year_df)
+        st.dataframe(display_df)
 
         # 可视化
         st.line_chart(year_df.set_index('year')['count'])
@@ -345,7 +363,9 @@ def show_standard_statistics():
 
     if not participant_df.empty:
         st.subheader("参与标准最多的人员")
-        st.dataframe(participant_df)
+        # 翻译列名
+        display_df = translate_columns(participant_df)
+        st.dataframe(display_df)
 
         # 可视化
         st.bar_chart(participant_df.set_index('name')['standard_count'])

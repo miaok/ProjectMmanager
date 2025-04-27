@@ -3,6 +3,7 @@ import pandas as pd
 from components.db_utils import get_connection
 import datetime
 from components.validation import validate_id_card, validate_phone
+from components.table_utils import translate_columns, display_dataframe
 
 def person_management():
     #st.title("人员管理")
@@ -225,9 +226,27 @@ def person_management():
     df = pd.read_sql("SELECT * FROM person", conn)
 
     if not df.empty:
-        # 选择显示的列 (不显示ID)
-        display_columns = ['name', 'gender', 'department', 'position', 'education', 'title', 'skill_level', 'phone']
-        st.dataframe(df[display_columns])
+        # 创建一个新的DataFrame，只包含我们需要的列，确保正确的列名翻译
+        formatted_df = pd.DataFrame()
+
+        # 复制原始列，确保title字段被正确翻译为职称
+        formatted_df['id'] = df['id']
+        formatted_df['name'] = df['name']  # 将被翻译为姓名
+        formatted_df['gender'] = df['gender']
+        formatted_df['birth_date'] = df['birth_date']
+        formatted_df['id_card'] = df['id_card']
+        formatted_df['education'] = df['education']
+        formatted_df['school'] = df['school']
+        formatted_df['graduation_date'] = df['graduation_date']
+        formatted_df['major'] = df['major']
+        formatted_df['title'] = df['title']  # 将被翻译为职称
+        formatted_df['phone'] = df['phone']
+        formatted_df['department'] = df['department']
+        formatted_df['position'] = df['position']
+        formatted_df['skill_level'] = df['skill_level']
+
+        # 使用自定义表格显示工具
+        display_dataframe(formatted_df, 'person')
 
         # 详细信息查看和删除选项
         col_view, col_del = st.columns(2)
@@ -407,7 +426,9 @@ def show_person_statistics():
 
     if not department_stats.empty:
         st.subheader("部门人员分布")
-        st.dataframe(department_stats)
+        # 翻译列名
+        display_df = translate_columns(department_stats)
+        st.dataframe(display_df)
         st.bar_chart(department_stats.set_index('department')['count'])
 
     # 按技能等级统计
@@ -427,7 +448,9 @@ def show_person_statistics():
 
     if not skill_stats.empty:
         st.subheader("技能等级分布")
-        st.dataframe(skill_stats)
+        # 翻译列名
+        display_df = translate_columns(skill_stats)
+        st.dataframe(display_df)
         st.bar_chart(skill_stats.set_index('skill_level')['count'])
 
     # 按学历统计
@@ -446,7 +469,9 @@ def show_person_statistics():
 
     if not education_stats.empty:
         st.subheader("学历分布")
-        st.dataframe(education_stats)
+        # 翻译列名
+        display_df = translate_columns(education_stats)
+        st.dataframe(display_df)
         st.bar_chart(education_stats.set_index('education')['count'])
 
     conn.close()

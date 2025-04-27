@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from components.db_utils import get_connection
 import datetime
+from components.table_utils import translate_columns, display_dataframe
 
 def paper_management():
     #st.title("论文管理")
@@ -259,12 +260,25 @@ def paper_management():
 
         # 格式化显示数据
         display_df = papers_df.copy()
-        display_df['第一作者'] = display_df['first_author_id'].apply(format_first_author)
-        display_df['参与作者'] = display_df['co_authors'].apply(format_co_authors)
 
-        # 显示论文列表 (不显示ID)
-        display_columns = ['title', 'journal', 'journal_type', 'publish_date', 'volume_info', '第一作者', 'organization']
-        st.dataframe(display_df[display_columns])
+        # 创建一个新的DataFrame，只包含我们需要的列，避免重复列名问题
+        formatted_df = pd.DataFrame()
+
+        # 复制原始列
+        formatted_df['id'] = display_df['id']
+        formatted_df['title'] = display_df['title']
+        formatted_df['journal'] = display_df['journal']
+        formatted_df['journal_type'] = display_df['journal_type']
+        formatted_df['publish_date'] = display_df['publish_date']
+        formatted_df['volume_info'] = display_df['volume_info']
+
+        # 添加格式化的字段
+        formatted_df['第一作者'] = display_df['first_author_id'].apply(format_first_author)
+        formatted_df['参与作者'] = display_df['co_authors'].apply(format_co_authors)
+        formatted_df['组织/单位'] = display_df['organization']
+
+        # 使用自定义表格显示工具
+        display_dataframe(formatted_df, 'paper')
 
         # 详细信息查看和删除选项
         col_view, col_del = st.columns(2)
@@ -331,7 +345,9 @@ def show_paper_statistics():
 
     if not type_stats.empty:
         st.subheader("期刊类型统计")
-        st.dataframe(type_stats)
+        # 翻译列名
+        display_df = translate_columns(type_stats)
+        st.dataframe(display_df)
         st.bar_chart(type_stats.set_index('journal_type')['count'])
 
     # 按年度统计论文发表量
@@ -344,7 +360,9 @@ def show_paper_statistics():
 
     if not year_stats.empty and not year_stats['year'].iloc[0] is None:
         st.subheader("年度论文发表量")
-        st.dataframe(year_stats)
+        # 翻译列名
+        display_df = translate_columns(year_stats)
+        st.dataframe(display_df)
         st.line_chart(year_stats.set_index('year')['count'])
 
     # 按期刊统计论文数量
@@ -358,7 +376,9 @@ def show_paper_statistics():
 
     if not journal_stats.empty:
         st.subheader("期刊发表统计(Top 10)")
-        st.dataframe(journal_stats)
+        # 翻译列名
+        display_df = translate_columns(journal_stats)
+        st.dataframe(display_df)
         st.bar_chart(journal_stats.set_index('journal')['count'])
 
     conn.close()

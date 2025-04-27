@@ -5,6 +5,7 @@ from components.db_utils import get_connection
 import io
 import base64
 from datetime import datetime
+from components.table_utils import translate_columns, get_display_columns, display_dataframe
 
 def query_management():
     st.subheader("数据查询")
@@ -80,7 +81,9 @@ def query_management():
                         })
 
                         st.subheader("基本信息")
-                        st.dataframe(display_person)
+                        # 使用自定义表格显示工具
+                        display_df = translate_columns(display_person)
+                        st.dataframe(display_df)
                         results["基本信息"] = display_person
 
                 # 关联项目查询
@@ -136,7 +139,9 @@ def query_management():
                         display_columns = ['项目名称', '开始日期', '结束日期', '项目负责人', '项目成员', '项目成果']
 
                         st.subheader("关联项目")
-                        st.dataframe(display_projects[display_columns])
+                        # 使用自定义表格显示工具
+                        display_df = translate_columns(display_projects[display_columns])
+                        st.dataframe(display_df)
                         results["关联项目"] = display_projects[display_columns]
                     else:
                         st.info("该人员未参与任何项目")
@@ -173,7 +178,9 @@ def query_management():
                         display_columns = ['标准名称', '标准类型', '标准号', '发布日期', '实施日期', '参与单位', '参与人员']
 
                         st.subheader("关联标准")
-                        st.dataframe(display_standards[display_columns])
+                        # 使用自定义表格显示工具
+                        display_df = translate_columns(display_standards[display_columns])
+                        st.dataframe(display_df)
                         results["关联标准"] = display_standards[display_columns]
                     else:
                         st.info("该人员未参与任何标准")
@@ -223,7 +230,9 @@ def query_management():
                         display_columns = ['专利名称', '专利类型', '专利号', '申请日期', '授权日期', '申请单位', '专利所有人', '参与人员']
 
                         st.subheader("关联专利")
-                        st.dataframe(display_patents[display_columns])
+                        # 使用自定义表格显示工具
+                        display_df = translate_columns(display_patents[display_columns])
+                        st.dataframe(display_df)
                         results["关联专利"] = display_patents[display_columns]
                     else:
                         st.info("该人员未关联任何专利")
@@ -272,7 +281,9 @@ def query_management():
                         display_columns = ['论文标题', '期刊名称', '期刊类型', '发表日期', '作者单位', '第一作者', '参与作者']
 
                         st.subheader("关联论文")
-                        st.dataframe(display_papers[display_columns])
+                        # 使用自定义表格显示工具
+                        display_df = translate_columns(display_papers[display_columns])
+                        st.dataframe(display_df)
                         results["关联论文"] = display_papers[display_columns]
                     else:
                         st.info("该人员未关联任何论文")
@@ -372,7 +383,9 @@ def query_management():
                         display_columns = ['项目ID', '项目名称', '开始日期', '结束日期', '项目状态', '项目成果', '项目负责人', '项目成员']
 
                         st.subheader("项目详情")
-                        st.dataframe(display_project[display_columns])
+                        # 使用自定义表格显示工具
+                        display_df = translate_columns(display_project[display_columns])
+                        st.dataframe(display_df)
                         results["项目详情"] = display_project[display_columns]
 
                 # 项目负责人查询

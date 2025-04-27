@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from components.db_utils import get_connection
 import datetime
+from components.table_utils import translate_columns, display_dataframe
 
 def project_management():
     #st.title("项目管理")
@@ -251,14 +252,37 @@ def project_management():
     if not projects_df.empty:
         # 格式化显示数据
         display_df = projects_df.copy()
+
+        # 创建一个新的DataFrame，只包含我们需要的列，避免重复列名问题
+        formatted_df = pd.DataFrame()
+
+        # 复制原始列
+        formatted_df['id'] = display_df['id']
+        formatted_df['project_name'] = display_df['name']  # 使用project_name作为列名，以便正确翻译为"项目名称"
+        formatted_df['start_date'] = display_df['start_date']
+        formatted_df['end_date'] = display_df['end_date']
+        formatted_df['status'] = display_df['status']
+        formatted_df['outcome'] = display_df['outcome']
+
         # 处理负责人，检查是否存在
-        display_df['leader'] = display_df['leader_id'].apply(
+        formatted_df['负责人'] = display_df['leader_id'].apply(
             lambda x: persons_dict.get(x, "未找到 (可能已被删除)") if x and x in persons_dict else "无" if not x else "未找到 (可能已被删除)"
         )
 
-        # 显示项目列表 (不显示ID)
-        display_columns = ['name', 'start_date', 'end_date', 'leader', 'status', 'outcome']
-        st.dataframe(display_df[display_columns])
+        # 处理成员
+        def format_members(members_str):
+            if not members_str:
+                return ""
+            try:
+                member_ids = [int(m_id) for m_id in members_str.split(",")]
+                return ", ".join([persons_dict.get(m_id, f"ID:{m_id}") for m_id in member_ids if m_id in persons_dict])
+            except:
+                return members_str
+
+        formatted_df['成员'] = display_df['members'].apply(format_members)
+
+        # 使用自定义表格显示工具
+        display_dataframe(formatted_df, 'project')
 
         # 详细信息查看和删除选项
         col_view, col_del = st.columns(2)
@@ -347,8 +371,9 @@ def show_statistics():
 
     if not stats_df.empty:
         st.subheader("人员参与项目统计")
-        # 不显示ID列
-        st.dataframe(stats_df[['name', 'project_count']])
+        # 翻译列名
+        display_df = translate_columns(stats_df[['name', 'project_count']])
+        st.dataframe(display_df)
 
         # 可视化
         st.bar_chart(stats_df.set_index('name')['project_count'])
@@ -364,7 +389,9 @@ def show_statistics():
 
     if not status_df.empty:
         st.subheader("项目状态统计")
-        st.dataframe(status_df)
+        # 翻译列名
+        display_df = translate_columns(status_df)
+        st.dataframe(display_df)
 
         # 可视化项目状态分布
         st.bar_chart(status_df.set_index('status')['count'])

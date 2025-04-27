@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from components.db_utils import get_connection
 import datetime
+from components.table_utils import translate_columns, display_dataframe
 
 def patent_management():
     #st.title("专利管理")
@@ -65,9 +66,9 @@ def patent_management():
         # 创建两个按钮用于切换模式，使用更紧凑的布局
         button_cols = st.columns([1, 1, 3])  # 两个按钮占用较小空间，右侧留白
         with button_cols[0]:
-            add_button = st.button("新增信息", on_click=set_add_mode, type="primary" if not st.session_state.patent_edit_mode else "secondary")
+            st.button("新增信息", on_click=set_add_mode, type="primary" if not st.session_state.patent_edit_mode else "secondary")
         with button_cols[1]:
-            edit_button = st.button("编辑已有信息", on_click=set_edit_mode, type="primary" if st.session_state.patent_edit_mode else "secondary")
+            st.button("编辑已有信息", on_click=set_edit_mode, type="primary" if st.session_state.patent_edit_mode else "secondary")
 
         # 获取当前模式
         edit_mode = st.session_state.patent_edit_mode
@@ -273,14 +274,26 @@ def patent_management():
 
         # 格式化显示数据
         display_df = patents_df.copy()
-        display_df['专利所有人'] = display_df['owner_id'].apply(format_owner)
-        display_df['申请日期'] = display_df['application_date']
-        display_df['授权日期'] = display_df['grant_date']
-        display_df['证书状态'] = display_df['certificate']
 
-        # 显示专利列表 (不显示ID)
-        display_columns = ['name', 'type', '申请日期', '授权日期', '专利所有人', 'patent_number', '证书状态']
-        st.dataframe(display_df[display_columns])
+        # 创建一个新的DataFrame，只包含我们需要的列，避免重复列名问题
+        formatted_df = pd.DataFrame()
+
+        # 复制原始列
+        formatted_df['id'] = display_df['id']
+        formatted_df['patent_name'] = display_df['name']  # 使用patent_name作为列名，以便正确翻译为"专利名称"
+        formatted_df['type'] = display_df['type']
+        formatted_df['application_date'] = display_df['application_date']
+        formatted_df['grant_date'] = display_df['grant_date']
+        formatted_df['patent_number'] = display_df['patent_number']
+        formatted_df['certificate'] = display_df['certificate']
+
+        # 添加格式化的字段
+        formatted_df['专利所有人'] = display_df['owner_id'].apply(format_owner)
+        formatted_df['参与人员'] = display_df['participants'].apply(format_participants)
+        formatted_df['单位'] = display_df['company']
+
+        # 使用自定义表格显示工具
+        display_dataframe(formatted_df, 'patent')
 
         # 详细信息查看和删除选项
         col_view, col_del = st.columns(2)
@@ -344,7 +357,9 @@ def show_patent_statistics():
 
     if not type_stats.empty:
         st.subheader("专利类型统计")
-        st.dataframe(type_stats)
+        # 翻译列名
+        display_df = translate_columns(type_stats)
+        st.dataframe(display_df)
         st.bar_chart(type_stats.set_index('type')['count'])
 
     # 按证书状态统计
@@ -356,7 +371,9 @@ def show_patent_statistics():
 
     if not certificate_stats.empty:
         st.subheader("证书状态统计")
-        st.dataframe(certificate_stats)
+        # 翻译列名
+        display_df = translate_columns(certificate_stats)
+        st.dataframe(display_df)
         st.bar_chart(certificate_stats.set_index('certificate')['count'])
 
     # 按年度统计专利申请量
@@ -369,7 +386,9 @@ def show_patent_statistics():
 
     if not year_stats.empty and not year_stats['year'].iloc[0] is None:
         st.subheader("年度专利申请量")
-        st.dataframe(year_stats)
+        # 翻译列名
+        display_df = translate_columns(year_stats)
+        st.dataframe(display_df)
         st.line_chart(year_stats.set_index('year')['count'])
 
     conn.close()
