@@ -4,6 +4,9 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import networkx as nx
+from pyvis.network import Network
+import tempfile
 from components.db_utils import get_connection
 from components.project import show_statistics
 from components.standard import show_standard_statistics
@@ -19,9 +22,9 @@ st.set_page_config(
 # 页面标题
 st.title("统计分析")
 
-# 创建切换标签页，增加人员统计标签页和自定义图表标签页
-stats_tab1, stats_tab2, stats_tab3, stats_tab4, stats_tab5, stats_tab_custom = st.tabs(
-    ["人员统计", "项目统计", "标准统计", "专利统计", "论文统计", "自定义图表"]
+# 创建切换标签页，增加人员统计标签页、网络分析标签页和自定义图表标签页
+stats_tab1, stats_tab2, stats_tab3, stats_tab4, stats_tab5, stats_tab_network, stats_tab_custom = st.tabs(
+    ["人员统计", "项目统计", "标准统计", "专利统计", "论文统计", "人员关联网络", "自定义图表"]
 )
 
 # 新增人员统计标签页
@@ -628,6 +631,406 @@ with stats_tab4:
 # 添加论文统计标签页
 with stats_tab5:
     show_paper_statistics()
+
+# 人员关联网络分析标签页
+with stats_tab_network:
+    st.subheader("人员关联网络分析")
+
+    st.markdown("""
+    本页面展示基于专利和论文合作关系的人员关联网络图。通过这个网络图，您可以直观地看到：
+
+    - 哪些人员之间有合作关系
+    - 谁是合作网络中的关键节点（核心人物）
+    - 不同合作群体之间的联系
+
+    在网络图中：
+    - 每个节点代表一个人员
+    - 连线表示两人之间有合作关系
+    - 节点大小表示该人员的合作关系数量
+    - 节点颜色根据部门或合作频率区分
+    """)
+
+    # 选择网络类型
+    network_type = st.radio(
+        "选择关联网络类型",
+        ["专利合作网络", "论文合作网络", "综合合作网络"],
+        horizontal=True
+    )
+
+    # 获取数据库连接
+    conn = get_connection()
+
+    # 获取所有人员信息
+    persons_df = pd.read_sql("SELECT id, name, department FROM person", conn)
+    persons_dict = dict(zip(persons_df['id'], persons_df['name']))
+
+    # 创建网络图
+    G = nx.Graph()
+
+    # 添加节点
+    for _, person in persons_df.iterrows():
+        G.add_node(person['id'], name=person['name'], department=person['department'])
+
+    # 根据选择的网络类型添加边
+    if network_type == "专利合作网络" or network_type == "综合合作网络":
+        # 获取专利数据
+        patents_df = pd.read_sql("SELECT id, name, owner_id, participants FROM patent", conn)
+
+        # 处理每个专利的合作关系
+        for _, patent in patents_df.iterrows():
+            owner_id = patent['owner_id']
+            if pd.notna(owner_id) and owner_id:
+                # 处理参与者
+                if pd.notna(patent['participants']) and patent['participants']:
+                    participants = [int(p.strip()) for p in patent['participants'].split(',') if p.strip()]
+
+                    # 添加所有人与参与者之间的边
+                    for participant_id in participants:
+                        if owner_id != participant_id:  # 避免自环
+                            if G.has_edge(owner_id, participant_id):
+                                G[owner_id][participant_id]['weight'] = G[owner_id][participant_id].get('weight', 0) + 1
+                                G[owner_id][participant_id]['patents'] = G[owner_id][participant_id].get('patents', []) + [patent['name']]
+                            else:
+                                G.add_edge(owner_id, participant_id, weight=1, type='patent', patents=[patent['name']])
+
+                    # 添加参与者之间的边
+                    for i in range(len(participants)):
+                        for j in range(i+1, len(participants)):
+                            if participants[i] != participants[j]:  # 避免自环
+                                if G.has_edge(participants[i], participants[j]):
+                                    G[participants[i]][participants[j]]['weight'] = G[participants[i]][participants[j]].get('weight', 0) + 1
+                                    G[participants[i]][participants[j]]['patents'] = G[participants[i]][participants[j]].get('patents', []) + [patent['name']]
+                                else:
+                                    G.add_edge(participants[i], participants[j], weight=1, type='patent', patents=[patent['name']])
+
+    if network_type == "论文合作网络" or network_type == "综合合作网络":
+        # 获取论文数据
+        papers_df = pd.read_sql("SELECT id, title, first_author_id, co_authors FROM paper", conn)
+
+        # 处理每篇论文的合作关系
+        for _, paper in papers_df.iterrows():
+            first_author_id = paper['first_author_id']
+            if pd.notna(first_author_id) and first_author_id:
+                # 处理共同作者
+                if pd.notna(paper['co_authors']) and paper['co_authors']:
+                    co_authors = [int(a.strip()) for a in paper['co_authors'].split(',') if a.strip()]
+
+                    # 添加第一作者与共同作者之间的边
+                    for co_author_id in co_authors:
+                        if first_author_id != co_author_id:  # 避免自环
+                            if G.has_edge(first_author_id, co_author_id):
+                                G[first_author_id][co_author_id]['weight'] = G[first_author_id][co_author_id].get('weight', 0) + 1
+                                G[first_author_id][co_author_id]['papers'] = G[first_author_id][co_author_id].get('papers', []) + [paper['title']]
+                            else:
+                                G.add_edge(first_author_id, co_author_id, weight=1, type='paper', papers=[paper['title']])
+
+                    # 添加共同作者之间的边
+                    for i in range(len(co_authors)):
+                        for j in range(i+1, len(co_authors)):
+                            if co_authors[i] != co_authors[j]:  # 避免自环
+                                if G.has_edge(co_authors[i], co_authors[j]):
+                                    G[co_authors[i]][co_authors[j]]['weight'] = G[co_authors[i]][co_authors[j]].get('weight', 0) + 1
+                                    G[co_authors[i]][co_authors[j]]['papers'] = G[co_authors[i]][co_authors[j]].get('papers', []) + [paper['title']]
+                                else:
+                                    G.add_edge(co_authors[i], co_authors[j], weight=1, type='paper', papers=[paper['title']])
+
+    # 移除没有连接的节点
+    isolated_nodes = list(nx.isolates(G))
+    G.remove_nodes_from(isolated_nodes)
+
+    if len(G.nodes()) == 0:
+        st.warning("没有找到合作关系数据，无法生成网络图。")
+    else:
+        # 计算网络指标
+        st.subheader("网络分析指标")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("节点数量", len(G.nodes()))
+        with col2:
+            st.metric("连接数量", len(G.edges()))
+        with col3:
+            if len(G.nodes()) > 1:
+                density = nx.density(G)
+                st.metric("网络密度", f"{density:.4f}")
+            else:
+                st.metric("网络密度", "N/A")
+
+        # 计算中心性指标
+        if len(G.nodes()) > 1:
+            # 度中心性
+            degree_centrality = nx.degree_centrality(G)
+            # 接近中心性
+            try:
+                closeness_centrality = nx.closeness_centrality(G)
+            except:
+                closeness_centrality = {node: 0 for node in G.nodes()}
+            # 介数中心性
+            try:
+                betweenness_centrality = nx.betweenness_centrality(G)
+            except:
+                betweenness_centrality = {node: 0 for node in G.nodes()}
+
+            # 创建中心性数据框
+            centrality_df = pd.DataFrame({
+                'id': list(degree_centrality.keys()),
+                'name': [persons_dict.get(node_id, f"ID:{node_id}") for node_id in degree_centrality.keys()],
+                'degree': list(degree_centrality.values()),
+                'closeness': list(closeness_centrality.values()),
+                'betweenness': list(betweenness_centrality.values())
+            })
+
+            # 按度中心性排序
+            centrality_df = centrality_df.sort_values('degree', ascending=False).reset_index(drop=True)
+            centrality_df.index = centrality_df.index + 1  # 索引从1开始
+
+            # 显示中心性指标
+            st.subheader("人员中心性指标 (Top 10)")
+            st.dataframe(centrality_df.head(10), hide_index=False, use_container_width=True)
+
+            # 可视化中心性指标
+            st.subheader("中心性指标可视化")
+            centrality_fig = px.scatter(
+                centrality_df.head(15),
+                x='degree',
+                y='betweenness',
+                size='closeness',
+                color='degree',
+                hover_name='name',
+                title='人员中心性指标散点图',
+                labels={
+                    'degree': '度中心性',
+                    'betweenness': '介数中心性',
+                    'closeness': '接近中心性'
+                }
+            )
+            st.plotly_chart(centrality_fig)
+
+        # 使用Plotly绘制网络图
+        st.subheader("人员关联网络图")
+
+        # 计算节点大小和颜色
+        node_size = dict(G.degree())
+        max_size = max(node_size.values()) if node_size else 1
+        node_size = {k: 10 + 40 * (v / max_size) for k, v in node_size.items()}
+
+        # 获取部门信息用于颜色区分
+        departments = {}
+        for node in G.nodes():
+            node_data = G.nodes[node]
+            departments[node] = node_data.get('department', 'Unknown')
+
+        unique_departments = list(set(departments.values()))
+        department_colors = {}
+        for i, dept in enumerate(unique_departments):
+            department_colors[dept] = px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)]
+
+        # 使用力导向算法计算节点位置
+        pos = nx.spring_layout(G, seed=42)
+
+        # 创建边的跟踪
+        edge_x = []
+        edge_y = []
+        edge_text = []
+
+        for edge in G.edges():
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+
+            # 添加边的信息
+            weight = G[edge[0]][edge[1]].get('weight', 1)
+            edge_type = G[edge[0]][edge[1]].get('type', 'unknown')
+
+            if edge_type == 'patent':
+                patents = G[edge[0]][edge[1]].get('patents', [])
+                edge_info = f"{persons_dict.get(edge[0], 'Unknown')} - {persons_dict.get(edge[1], 'Unknown')}<br>合作专利数: {weight}<br>专利: {', '.join(patents[:3])}"
+                if len(patents) > 3:
+                    edge_info += f"... (共{len(patents)}项)"
+            elif edge_type == 'paper':
+                papers = G[edge[0]][edge[1]].get('papers', [])
+                edge_info = f"{persons_dict.get(edge[0], 'Unknown')} - {persons_dict.get(edge[1], 'Unknown')}<br>合作论文数: {weight}<br>论文: {', '.join(papers[:3])}"
+                if len(papers) > 3:
+                    edge_info += f"... (共{len(papers)}篇)"
+            else:
+                edge_info = f"{persons_dict.get(edge[0], 'Unknown')} - {persons_dict.get(edge[1], 'Unknown')}<br>合作次数: {weight}"
+
+            edge_text.append(edge_info)
+
+        # 创建边的跟踪对象
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=0.5, color='#888'),
+            hoverinfo='text',
+            text=edge_text,
+            mode='lines')
+
+        # 创建节点的跟踪
+        node_x = []
+        node_y = []
+        node_text = []
+        node_size_list = []
+        node_color = []
+
+        for node in G.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+
+            # 节点信息
+            name = persons_dict.get(node, f"ID:{node}")
+            department = departments.get(node, 'Unknown')
+            degree = G.degree(node)
+
+            node_text.append(f"姓名: {name}<br>部门: {department}<br>合作关系数: {degree}")
+            node_size_list.append(node_size[node])
+            node_color.append(department_colors.get(department, '#000000'))
+
+        # 创建节点的跟踪对象
+        node_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='markers',  # 只使用标记模式，不显示文本
+            hoverinfo='text',
+            text=node_text,  # 悬停时显示详细信息
+            marker=dict(
+                showscale=False,
+                color=node_color,
+                size=node_size_list,
+                line=dict(width=1, color='#888')
+            )
+        )
+
+        # 创建节点标签的跟踪对象
+        node_labels = []
+        for node in G.nodes():
+            node_labels.append(persons_dict.get(node, f"ID:{node}"))
+
+        node_label_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='text',
+            text=node_labels,
+            textposition="middle center",  # 文本位置在节点中心
+            textfont=dict(
+                family="Arial",
+                size=11,
+                color="black",
+                weight="bold"  # 加粗文本
+            ),
+            hoverinfo='none'
+        )
+
+        # 创建图形
+        fig = go.Figure(data=[edge_trace, node_trace, node_label_trace],
+                        layout=go.Layout(
+                            title=f'人员{network_type}',
+                            titlefont=dict(size=16),
+                            showlegend=False,
+                            hovermode='closest',
+                            margin=dict(b=20, l=5, r=5, t=40),
+                            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                        ))
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # 添加图例说明
+        st.subheader("图例说明")
+
+        # 部门颜色图例
+        st.markdown("**部门颜色对应关系:**")
+        dept_legend = ""
+        for dept, color in department_colors.items():
+            dept_legend += f'<span style="color:{color}">■</span> {dept} &nbsp; '
+        st.markdown(dept_legend, unsafe_allow_html=True)
+
+        st.markdown("""
+        **节点大小:** 节点大小表示该人员的合作关系数量，越大表示合作越多。
+
+        **连线:** 连线表示两人之间有合作关系，可以是共同参与专利或论文。
+        """)
+
+        # 社区检测
+        if len(G.nodes()) > 2:
+            st.subheader("合作社区检测")
+
+            try:
+                # 使用Louvain算法检测社区
+                from networkx.algorithms import community
+                communities = community.louvain_communities(G)
+
+                # 显示社区信息
+                st.markdown(f"**检测到 {len(communities)} 个合作社区**")
+
+                for i, comm in enumerate(communities):
+                    if len(comm) > 0:
+                        comm_members = [persons_dict.get(node_id, f"ID:{node_id}") for node_id in comm]
+                        st.markdown(f"**社区 {i+1}:** {', '.join(comm_members)}")
+
+                # 可视化社区
+                community_dict = {}
+                for i, comm in enumerate(communities):
+                    for node in comm:
+                        community_dict[node] = i
+
+                # 更新节点颜色
+                node_community_colors = [px.colors.qualitative.Plotly[community_dict.get(node, 0) % len(px.colors.qualitative.Plotly)] for node in G.nodes()]
+
+                # 创建新的节点跟踪对象
+                node_comm_trace = go.Scatter(
+                    x=node_x, y=node_y,
+                    mode='markers',  # 只使用标记模式，不显示文本
+                    hoverinfo='text',
+                    text=node_text,  # 悬停时显示详细信息
+                    marker=dict(
+                        showscale=False,
+                        color=node_community_colors,
+                        size=node_size_list,
+                        line=dict(width=1, color='#888')
+                    )
+                )
+
+                # 创建节点标签的跟踪对象
+                node_comm_label_trace = go.Scatter(
+                    x=node_x, y=node_y,
+                    mode='text',
+                    text=node_labels,
+                    textposition="middle center",  # 文本位置在节点中心
+                    textfont=dict(
+                        family="Arial",
+                        size=11,
+                        color="black",
+                        weight="bold"  # 加粗文本
+                    ),
+                    hoverinfo='none'
+                )
+
+                # 创建社区图形
+                comm_fig = go.Figure(data=[edge_trace, node_comm_trace, node_comm_label_trace],
+                                layout=go.Layout(
+                                    title='人员合作社区',
+                                    titlefont=dict(size=16),
+                                    showlegend=False,
+                                    hovermode='closest',
+                                    margin=dict(b=20, l=5, r=5, t=40),
+                                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                                ))
+
+                st.plotly_chart(comm_fig, use_container_width=True)
+
+                # 社区颜色图例
+                st.markdown("**社区颜色对应关系:**")
+                comm_legend = ""
+                for i in range(len(communities)):
+                    color = px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)]
+                    comm_legend += f'<span style="color:{color}">■</span> 社区 {i+1} &nbsp; '
+                st.markdown(comm_legend, unsafe_allow_html=True)
+
+            except Exception as e:
+                st.error(f"社区检测失败: {str(e)}")
+
+    conn.close()
 
 # 自定义图表标签页
 with stats_tab_custom:
